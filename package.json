@@ -1,0 +1,26 @@
+{
+  "name": "vite-plugin-f4",
+  "version": "1.0.0",
+  "description": "This is a Vite plugin for f4, a lightweight web development framework",
+  "keywords": [
+    "f4",
+    "vite",
+    "plugin"
+  ],
+  "homepage": "https://github.com/f4php/vite-plugin-f4#readme",
+  "bugs": {
+    "url": "https://github.com/f4php/vite-plugin-f4/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/f4php/vite-plugin-f4.git"
+  },
+  "license": "MIT",
+  "author": "Dennis Kreminsky <dennis@kreminsky.com>",
+  "type": "module",
+  "main": "./dist/index.js",
+  "devDependencies": {
+    "glob": "^11.0.0",
+    "pug": "^3.0.3"
+  }
+}
