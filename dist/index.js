@@ -216,7 +216,9 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, root }) => {
     },
     handleHotUpdate({ type, file, server, modules }) {
       if (type === 'update' && (file.endsWith('.pug') || file.endsWith('.php'))) {
-        server.ws.send({ type: 'full-reload', path: '*' })
+        server.restart(true).then(() => {
+          server.ws.send({ type: 'full-reload', path: '*' });
+        });
       }
     }
   }
