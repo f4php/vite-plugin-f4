@@ -67,7 +67,7 @@ function locateEntryPoints(pugTemplates, root) {
         }
         if (attrs.src.endsWith('.vue')) {
           if (!attrs.element && !attrs.name) {
-            throw new Error('Missing "element" and "name" attributes, but one of them required for SFC resources');
+            throw new Error(`Missing "element" and "name" attributes, but one of them required for SFC resources in ${file}:${node.line}`);
           }
           entryPoints[bundle].push({
             path: path.resolve(path.dirname(file), attrs.src),
