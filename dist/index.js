@@ -27,8 +27,8 @@ function extractAttributes(node) {
       else if (attribute.name === 'bundle') {
         result.bundle = stripQuotesAndTrim(attribute.val);
       }
-      else if (attribute.name === 'mount') {
-        result.mount = stripQuotesAndTrim(attribute.val);
+      else if (attribute.name === 'element') {
+        result.element = stripQuotesAndTrim(attribute.val);
       }
     });
   }
@@ -66,13 +66,13 @@ function locateEntryPoints(pugTemplates, root) {
           entryPoints[bundle] = [];
         }
         if (attrs.src.endsWith('.vue')) {
-          if (!attrs.mount && !attrs.name) {
-            throw new Error('Missing "mount" and "name" attributes, but one of them required for SFC resources');
+          if (!attrs.element && !attrs.name) {
+            throw new Error('Missing "element" and "name" attributes, but one of them required for SFC resources');
           }
           entryPoints[bundle].push({
             path: path.resolve(path.dirname(file), attrs.src),
-            element: attrs.mount ?? null,
-            name: toCamelCase(attrs.name ?? attrs.mount),
+            element: attrs.element ?? null,
+            name: toCamelCase(attrs.name ?? attrs.element),
             type: 'vue-sfc'
           });
         }
