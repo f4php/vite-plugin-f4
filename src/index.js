@@ -245,7 +245,7 @@ const createDependenciesAliasesPlugin = ({ dependencies }) => {
   };
 }
 
-export default function vitePluginF4(options) {
+function vitePluginF4(options) {
   const {
     pugPaths = [
       'templates/**/*.pug',
@@ -264,3 +264,5 @@ export default function vitePluginF4(options) {
     createDependenciesAliasesPlugin( { dependencies })
   ]
 }
+
+export default vitePluginF4;
