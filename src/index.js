@@ -121,10 +121,6 @@ function stripQuotesAndTrim(string) {
   return string.replace(/^([\'\"])\s*(.+)\s*\1$/, '$2');
 }
 
-function getShortName(file, root) {
-  return file.startsWith(root + '/') ? path.posix.relative(root, file) : file
-}
-
 const createConfigPlugin = ({ outDir, host, port, backendUrl }) => {
   return {
     name: 'vite-plugin-f4-config',
@@ -215,10 +211,16 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, root }) => {
       }
     },
     handleHotUpdate({ type, file, server, modules }) {
-      if (type === 'update' && (file.endsWith('.pug') || file.endsWith('.php'))) {
-        server.restart(true).then(() => {
+      if (type === 'update') {
+        if (file.endsWith('.pug')) {
+          // TODO: restart server only when special vite: tags are found in pug template, otherwise just reload
+          server.restart(true).then(() => {
+            server.ws.send({ type: 'full-reload', path: '*' });
+          });
+        }
+        else if (file.endsWith('.php')) {
           server.ws.send({ type: 'full-reload', path: '*' });
-        });
+        }
       }
     }
   }
