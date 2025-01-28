@@ -42,7 +42,7 @@ const createConfigPlugin = ({ outDir, base, host, port, backendUrl }) => {
                 headers: {
                   'X-Vite-Devserver': true
                 },
-                target: `http://${backendUrl}`
+                target: backendUrl
               }
             }
           }

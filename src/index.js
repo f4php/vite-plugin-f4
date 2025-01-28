@@ -14,7 +14,7 @@ function vitePluginF4(options) {
     base = './',
     host = 'localhost',
     port = 5173,
-    backendUrl = 'localhost:8080',
+    backendUrl = 'http://localhost:8080',
     dependencies = [],
     prefix = `\0virtual:f4/`
   } = options;
