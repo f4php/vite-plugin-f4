@@ -4,7 +4,9 @@ function createFixImportAnalysisPlugin(options, config) {
     handleHotUpdate({ type, file, server }) {
       if(type==='update' && file.startsWith(config.root)) {
         const targetModule = server.moduleGraph.getModuleById(file);
-        targetModule.url = `/@fs${file}`;
+        if(targetModule) {
+          targetModule.url = `/@fs${file}`;
+        }
       }
     },
     transform(code, id) {
