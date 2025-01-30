@@ -19,8 +19,8 @@ function vitePluginF4(options) {
     prefix = `\0virtual:f4/`
   } = options;
   return [
-    createConfigPlugin({ outDir, base, host, port, backendUrl }),
-    createVirtualEntryPointsPlugin({ pugPaths, prefix }),
+    createConfigPlugin({ outDir, base }),
+    createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl }),
     createDependenciesAliasesPlugin( { dependencies }),
     addFinalPluginPlugin({plugin: createFixImportAnalysisPlugin, options: {prefix}}),
   ]

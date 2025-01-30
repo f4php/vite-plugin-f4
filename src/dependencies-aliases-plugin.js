@@ -2,8 +2,8 @@ import path from 'path';
 
 const createDependenciesAliasesPlugin = ({ dependencies }) => {
   return {
-    name: 'vite-plugin-f4-module-aliases',
-    config(config, { command }) {
+    name: 'vite-plugin-f4-dependencies-aliases',
+    config() {
       return {
         resolve: {
           alias: {
@@ -18,6 +18,5 @@ const createDependenciesAliasesPlugin = ({ dependencies }) => {
     }
   };
 }
-
 
 export default createDependenciesAliasesPlugin;

@@ -121,54 +121,79 @@ function stripQuotesAndTrim(string) {
   return string.replace(/^([\'\"])\s*(.+)\s*\1$/, '$2');
 }
 
-const createVirtualEntryPointsPlugin = ({ pugPaths, prefix }) => {
+const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl }) => {
   if (!pugPaths) {
     return;
   }
   const PREFIX = prefix;
-  const entryPoints = locateEntryPoints(pugPaths);
-  const modules = generateRollupInputs(entryPoints);
-  const externalModules = {};
+  const pugEntryPoints = locateEntryPoints(pugPaths);
+  const virtualEntryPoints = generateRollupInputs(pugEntryPoints);
+  const configEntryPoints = {};
+  let root;
   return {
     name: 'vite-plugin-f4-virtual-entry-points',
-    config(config, { command }) {
+    config(config) {
       config.build ??= {};
       config.build.rollupOptions ??= {};
       if (config.build.rollupOptions.input instanceof Array) {
-        config.build.rollupOptions.input = [
-          ...config.build.rollupOptions.input,
-          ...Object.keys(modules)
-        ];
+        config.build.rollupOptions.input.map((value) => { configEntryPoints[value] = null; });
       }
       else if (config.build.rollupOptions.input instanceof Object) {
-        // we need to save paths to use later in the resolveId
-        Object.entries(config.build.rollupOptions.input).map(([key, value]) => { externalModules[key] = value });
-        config.build.rollupOptions.input = [
-          ...Object.keys(config.build.rollupOptions.input),
-          ...Object.keys(modules)
-        ];
+        Object.entries(config.build.rollupOptions.input).map(([key, value]) => { configEntryPoints[key] = value; });
       }
-      else {
-        config.build.rollupOptions.input = [
-          config.build.rollupOptions.input,
-          ...Object.keys(modules)
-        ].filter(v => v);
+      else if(config.build.rollupOptions.input) {
+        [config.build.rollupOptions.input].map((value) => { configEntryPoints[value] = null; });
+      }
+      config.build.rollupOptions.input = Object.keys({
+        ...configEntryPoints,
+        ...virtualEntryPoints
+      });
+      const escapeRegexp = /[/\-\\^$*+?.()|[\]{}]/g;
+      const neverViaProxyPaths = [
+        '/@vite',
+        '/@id',
+        '/@fs',
+        '/node_modules',
+        ...Object.keys(configEntryPoints),
+        ]
+        .map(path => path.replace(escapeRegexp, '\\$&'))
+        .map(path => `(${path})`)
+        .join('|');
+      const proxyRegexp = '^(?!'+neverViaProxyPaths+').*$';
+      return {
+        server: {
+          host,
+          port,
+          strictPort: true,
+          proxy: {
+            [proxyRegexp]: {
+              xfwd: true,
+              headers: {
+                'X-Vite-Devserver': true
+              },
+              target: backendUrl
+            }
+          }
+        }
       }
     },
-    resolveId(id, importer) {
-      if (id in modules) {
+    configResolved(config) {
+      root = config.root;
+    },
+    resolveId(id) {
+      if (id in virtualEntryPoints) {
         return `${PREFIX}${id}`;
       }
-      else if (id in externalModules) {
-        return externalModules[id];
+      else if (id in configEntryPoints) {
+        return configEntryPoints[id] ? path.resolve(`${root}/${configEntryPoints[id]}`) : id;
       }
     },
     load(id) {
       if (id.startsWith(PREFIX)) {
-        return modules[id.slice(PREFIX.length)];
+        return virtualEntryPoints[id.slice(PREFIX.length)];
       }
     },
-    handleHotUpdate({ type, file, server, modules }) {
+    handleHotUpdate({ type, file, server }) {
       if (type === 'update') {
         if (file.endsWith('.pug')) {
           // TODO: restart server only when special vite: tags are found in pug template, otherwise just reload
