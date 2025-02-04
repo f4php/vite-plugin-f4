@@ -121,7 +121,7 @@ function stripQuotesAndTrim(string) {
   return string.replace(/^([\'\"])\s*(.+)\s*\1$/, '$2');
 }
 
-const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl }) => {
+const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl, neverProxy }) => {
   if (!pugPaths) {
     return;
   }
@@ -150,10 +150,7 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
       });
       const escapeRegexp = /[/\-\\^$*+?.()|[\]{}]/g;
       const neverViaProxyPaths = [
-        '/@vite',
-        '/@id',
-        '/@fs',
-        '/node_modules',
+        ...neverProxy,
         ...Object.keys(configEntryPoints),
         ]
         .map(path => path.replace(escapeRegexp, '\\$&'))
