@@ -190,15 +190,51 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
         return virtualEntryPoints[id.slice(PREFIX.length)];
       }
     },
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if(neverProxy.find(url => req.url.startsWith(url))) {
+          return next(); 
+        }
+        // const originalWrite = res.write;
+        const originalEnd = res.end;
+        const chunks = [];
+        res.write = function (chunk) {
+          chunks.push(chunk);
+          return true;
+        };
+        res.end = function (chunk) {
+          if (chunk) {
+            chunks.push(chunk);
+          }
+          let body = Buffer.concat(chunks).toString('utf8');
+          if (res.getHeader('content-type')?.includes('text/html')) {
+            if (!body.includes('/@vite/client')) {
+              body = body.replace('</head>', `<script type="module" src="/@vite/client"></script></head>`);
+            }
+          }
+          res.setHeader('content-length', Buffer.byteLength(body));
+          originalEnd.call(res, body);
+        };
+
+        next();
+      });
+    },
     handleHotUpdate({ type, file, server }) {
       if (type === 'update') {
-        if (file.endsWith('.pug')) {
-          // TODO: restart server only when special vite: tags are found in pug template, otherwise just reload
-          server.restart(true).then(() => {
-            server.ws.send({ type: 'full-reload', path: '*' });
-          });
+        if (file?.endsWith('.pug')) {
+          if (fs.existsSync(file)) {
+            const content = fs.readFileSync(file, 'utf8');
+            if(content?.includes('vite:bundle') || content?.includes('vite:resource')) {
+              server.restart(true).then(() => {
+                server.ws.send({ type: 'full-reload', path: '*' });
+              });
+            }
+            else {
+              server.ws.send({ type: 'full-reload', path: '*' });
+            }
+          }
         }
-        else if (file.endsWith('.php')) {
+        else if (file?.endsWith('.php')) {
           server.ws.send({ type: 'full-reload', path: '*' });
         }
       }
