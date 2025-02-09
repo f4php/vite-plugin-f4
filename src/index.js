@@ -21,7 +21,8 @@ function vitePluginF4(options) {
       '/@vite',
       '/@id',
       '/@fs',
-      '/node_modules'
+      '/node_modules',
+      '/vendor/f4php/framework',
     ],
   } = options;
   return [
