@@ -17,6 +17,8 @@ function vitePluginF4(options) {
     backendUrl = 'http://localhost:8080',
     dependencies = [],
     prefix = `\0virtual:f4/`,
+    stylesheetFilenameRegexp =  /^.+\.(css|scss|styl|stylus)$/,
+    inlineAssetsUrlRegexp =  /\/templates\/.+\.(svg|jpg|jpeg|png|gif|webp|avif|woff|woff2|ttf|otf|eot|mp4|webm|ogg|cur|ico)/,
     neverProxy = [
       '/@vite',
       '/@id',
@@ -29,7 +31,7 @@ function vitePluginF4(options) {
     createConfigPlugin({ outDir, base }),
     createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl, neverProxy }),
     createDependenciesAliasesPlugin( { dependencies }),
-    appendFinalPluginPlugin({plugin: createFixImportAnalysisPlugin, options: {prefix}}),
+    appendFinalPluginPlugin({plugin: createFixImportAnalysisPlugin, options: {prefix, inlineAssetsUrlRegexp, stylesheetFilenameRegexp}}),
   ]
 }
 
