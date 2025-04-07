@@ -85,7 +85,9 @@ function locateEntryPoints(pugTemplates, debug) {
       }
     });
   }
-  console.debug(`Located entrypoints:`, entryPoints);
+  if(debug) {
+    console.debug(`Located entrypoints:`, entryPoints);
+  }
   return entryPoints;
 }
 
