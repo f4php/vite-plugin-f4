@@ -39,7 +39,7 @@ function toCamelCase(identifier) {
   return identifier.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
 }
 
-function locateEntryPoints(pugTemplates) {
+function locateEntryPoints(pugTemplates, debug) {
   const entryPoints = {};
   const defaultBundleName = 'default';
   const files = glob.sync(pugTemplates);
@@ -85,10 +85,11 @@ function locateEntryPoints(pugTemplates) {
       }
     });
   }
+  console.debug(`Located entrypoints:`, entryPoints);
   return entryPoints;
 }
 
-function generateRollupInputs(entryPoints) {
+function generateRollupInputs(entryPoints, debug) {
   const input = {};
   for (const [bundle, points] of Object.entries(entryPoints)) {
     const importStatements = [
@@ -114,6 +115,9 @@ function generateRollupInputs(entryPoints) {
       .join('\n');
     input[bundle] = importStatements;
   }
+  if (debug) {
+    console.debug(`Configured bundles:`, input);
+  }
   return input;
 }
 
@@ -121,13 +125,13 @@ function stripQuotesAndTrim(string) {
   return string.replace(/^([\'\"])\s*(.+)\s*\1$/, '$2');
 }
 
-const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl, neverProxy }) => {
+const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl, neverProxy, debug }) => {
   if (!pugPaths) {
     return;
   }
   const PREFIX = prefix;
-  const pugEntryPoints = locateEntryPoints(pugPaths);
-  const virtualEntryPoints = generateRollupInputs(pugEntryPoints);
+  const pugEntryPoints = locateEntryPoints(pugPaths, debug);
+  const virtualEntryPoints = generateRollupInputs(pugEntryPoints, debug);
   const configEntryPoints = {};
   let root;
   return {
@@ -157,6 +161,9 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
         .map(path => `(${path})`)
         .join('|');
       const proxyRegexp = '^(?!'+neverViaProxyPaths+').*$';
+      if (debug) {
+        console.debug(`Configuring live proxy to URL: ${backendUrl}, using regexp: ${proxyRegexp} `);
+      }
       return {
         server: {
           host,
