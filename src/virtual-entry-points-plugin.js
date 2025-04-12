@@ -52,40 +52,45 @@ function locateEntryPoints(pugTemplates, debug) {
     }
   ];
   for (const file of files) {
-    const pug = fs.readFileSync(file, 'utf-8');
-    const ast = parse(lex(pug, {
-      filename: file,
-      plugins: lexPlugins
-    }));
-    const nodes = extractTags(ast, /^vite\:resource$/);
-    nodes.forEach((node) => {
-      const attrs = extractAttributes(node);
-      if (attrs.src) {
-        const bundle = attrs.bundle ?? defaultBundleName;
-        if (!entryPoints[bundle]) {
-          entryPoints[bundle] = [];
-        }
-        if (attrs.src.endsWith('.vue')) {
-          if (!attrs.element && !attrs.name) {
-            throw new Error(`Missing "element" and "name" attributes, but one of them required for SFC resources in ${file}:${node.line}`);
+    try {
+      const pug = fs.readFileSync(file, 'utf-8');
+      const ast = parse(lex(pug, {
+        filename: file,
+        plugins: lexPlugins
+      }));
+      const nodes = extractTags(ast, /^vite\:resource$/);
+      nodes.forEach((node) => {
+        const attrs = extractAttributes(node);
+        if (attrs.src) {
+          const bundle = attrs.bundle ?? defaultBundleName;
+          if (!entryPoints[bundle]) {
+            entryPoints[bundle] = [];
           }
-          entryPoints[bundle].push({
-            path: path.resolve(path.dirname(file), attrs.src),
-            element: attrs.element ?? null,
-            name: toCamelCase(attrs.name ?? attrs.element),
-            type: 'vue-sfc'
-          });
+          if (attrs.src.endsWith('.vue')) {
+            if (!attrs.element && !attrs.name) {
+              throw new Error(`Missing "element" and "name" attributes, but one of them required for SFC resources in ${file}:${node.line}`);
+            }
+            entryPoints[bundle].push({
+              path: path.resolve(path.dirname(file), attrs.src),
+              element: attrs.element ?? null,
+              name: toCamelCase(attrs.name ?? attrs.element),
+              type: 'vue-sfc'
+            });
+          }
+          else {
+            entryPoints[bundle].push({
+              path: path.resolve(path.dirname(file), attrs.src),
+              type: 'simple'
+            });
+          }
         }
-        else {
-          entryPoints[bundle].push({
-            path: path.resolve(path.dirname(file), attrs.src),
-            type: 'simple'
-          });
-        }
-      }
-    });
+      });
+    }
+    catch(e) {
+      console.error(`\x1b[31m Failed to parse ${file}\n` + e);
+    }
   }
-  if(debug) {
+  if (debug) {
     console.debug(`Located entrypoints:`, entryPoints);
   }
   return entryPoints;
@@ -147,7 +152,7 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
       else if (config.build.rollupOptions.input instanceof Object) {
         Object.entries(config.build.rollupOptions.input).map(([key, value]) => { configEntryPoints[key] = value; });
       }
-      else if(config.build.rollupOptions.input) {
+      else if (config.build.rollupOptions.input) {
         [config.build.rollupOptions.input].map((value) => { configEntryPoints[value] = null; });
       }
       config.build.rollupOptions.input = Object.keys({
@@ -158,11 +163,11 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
       const neverViaProxyPaths = [
         ...neverProxy,
         ...Object.keys(configEntryPoints),
-        ]
+      ]
         .map(path => path.replace(escapeRegexp, '\\$&'))
         .map(path => `(${path})`)
         .join('|');
-      const proxyRegexp = '^(?!'+neverViaProxyPaths+').*$';
+      const proxyRegexp = '^(?!' + neverViaProxyPaths + ').*$';
       if (debug) {
         console.debug(`Configuring live proxy to URL: ${backendUrl}, using regexp: ${proxyRegexp} `);
       }
@@ -201,8 +206,8 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
     },
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if(neverProxy.find(url => req.url.startsWith(url))) {
-          return next(); 
+        if (neverProxy.find(url => req.url.startsWith(url))) {
+          return next();
         }
         // const originalWrite = res.write;
         const originalEnd = res.end;
@@ -218,7 +223,7 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
           // virtual endpoint resources are passed here as strings, 
           // so we only process proxied content from the backend, 
           // which is an array of Buffers
-          if(chunks.every(c => Buffer.isBuffer(c))) {
+          if (chunks.every(c => Buffer.isBuffer(c))) {
             let body = Buffer.concat(chunks).toString('utf8');
             if (res.getHeader('content-type')?.includes('text/html')) {
               if (!body.includes('/@vite/client')) {
@@ -240,7 +245,7 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
         if (file?.endsWith('.pug')) {
           if (fs.existsSync(file)) {
             const content = fs.readFileSync(file, 'utf8');
-            if(content?.includes('vite:bundle') || content?.includes('vite:resource')) {
+            if (content?.includes('vite:bundle') || content?.includes('vite:resource')) {
               server.restart(true).then(() => {
                 server.ws.send({ type: 'full-reload', path: '*' });
               });
