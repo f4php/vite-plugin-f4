@@ -30,6 +30,9 @@ function extractAttributes(node) {
       else if (attribute.name === 'element') {
         result.element = stripQuotesAndTrim(attribute.val);
       }
+      else if (attribute.name === 'name') {
+        result.name = stripQuotesAndTrim(attribute.val);
+      }
     });
   }
   return result;
@@ -80,7 +83,8 @@ function locateEntryPoints(pugTemplates, debug) {
           else {
             entryPoints[bundle].push({
               path: path.resolve(path.dirname(file), attrs.src),
-              type: 'simple'
+              type: 'simple',
+              name: toCamelCase(attrs.name??''),
             });
           }
         }
@@ -105,7 +109,10 @@ function generateRollupInputs(entryPoints, debug) {
       ...points
     ]
       .map((point) => {
-        if (point?.type === 'simple') {
+        if ((point?.type === 'simple') && (point?.name)) {
+          return `import ${point.name} from '${point.path.replace(/\\/g, '/')}';`;
+        }
+        else if (point?.type === 'simple') {
           return `import '${point.path.replace(/\\/g, '/')}';`;
         }
         else if (point?.type === 'vue-sfc') {
