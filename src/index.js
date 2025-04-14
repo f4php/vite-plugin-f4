@@ -25,6 +25,7 @@ function vitePluginF4(options) {
       '/@fs',
       '/node_modules',
       '/vendor/f4php/framework',
+      '/templates',
     ],
     debug = false,
   } = options;
@@ -32,7 +33,7 @@ function vitePluginF4(options) {
     createConfigPlugin({ outDir, base }),
     createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl, neverProxy, debug }),
     createDependenciesAliasesPlugin({ dependencies, debug }),
-    appendFinalPluginPlugin({ plugin: createFixImportAnalysisPlugin, options: { prefix, inlineAssetsUrlRegexp, stylesheetFilenameRegexp } }),
+    appendFinalPluginPlugin({ plugin: createFixImportAnalysisPlugin, options: { prefix, inlineAssetsUrlRegexp, stylesheetFilenameRegexp, debug } }),
   ]
 }
 
