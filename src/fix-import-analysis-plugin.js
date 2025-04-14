@@ -17,9 +17,12 @@ function createFixImportAnalysisPlugin(options, config) {
         });
       }
       else if(id.replace(root, '').match(options.transformPathRegexp)) {
-        return code.replace(/import\s+(?<from>(\S+\s+from\s+))?(?<quote>([\"\'])?)(?<path>\S+?)\k<quote>/g, function(match, p1, p2, p3, p4, p5, offset, string, groups) {
+        return code.replace(/import\s+(?<from>(.+?\s+from\s+))?(?<quote>([\"\'])?)(?<path>\S+?)\k<quote>/g, function(match, p1, p2, p3, p4, p5, offset, string, groups) {
           if(groups.path.match(options.transformPathRegexp)) {
-            return `import ${groups.from}'/@fs${root}${groups.path}';`;
+            return groups.from ?
+              `import ${groups.from}"/@fs${root}${groups.path}";`
+              :
+              `import "/@fs${root}${groups.path}";`;
           }
           return match;
         });
