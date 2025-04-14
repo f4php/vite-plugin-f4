@@ -25,15 +25,15 @@ function vitePluginF4(options) {
       '/@fs',
       '/node_modules',
       '/vendor/f4php/framework',
-      '/templates',
     ],
+    transformPathRegexp = /^\/templates\//, // relative to root, all matching imports will get /@fs prefix
     debug = false,
   } = options;
   return [
     createConfigPlugin({ outDir, base }),
     createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl, neverProxy, debug }),
     createDependenciesAliasesPlugin({ dependencies, debug }),
-    appendFinalPluginPlugin({ plugin: createFixImportAnalysisPlugin, options: { prefix, inlineAssetsUrlRegexp, stylesheetFilenameRegexp, debug } }),
+    appendFinalPluginPlugin({ plugin: createFixImportAnalysisPlugin, options: { prefix, inlineAssetsUrlRegexp, stylesheetFilenameRegexp, transformPathRegexp, debug } }),
   ]
 }
 
