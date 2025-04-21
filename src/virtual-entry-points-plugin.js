@@ -227,20 +227,26 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
           if (chunk) {
             chunks.push(chunk);
           }
+          const contentType = res.getHeader('content-type');
+          const isHTML = contentType?.includes('text/html');
           // virtual endpoint resources are passed here as strings, 
           // so we only process proxied content from the backend, 
           // which is an array of Buffers
           if (chunks.every(c => Buffer.isBuffer(c))) {
-            let body = Buffer.concat(chunks).toString('utf8');
-            if (res.getHeader('content-type')?.includes('text/html')) {
+            const buffer = Buffer.concat(chunks);
+            if (isHTML) {
+              let body = buffer.toString('utf8');
               if (!body.includes('/@vite/client')) {
                 body = body.replace('</head>', `<script type="module" src="/@vite/client"></script></head>`);
+                res.setHeader('content-length', Buffer.byteLength(body));
+                originalEnd.call(res, body);
+                return;
               }
             }
-            res.setHeader('content-length', Buffer.byteLength(body));
-            originalEnd.call(res, body);
-          }
-          else {
+            res.setHeader('content-length', buffer.length);
+            originalEnd.call(res, buffer);
+          } else {
+            // Handle string chunks
             originalEnd.call(res, chunks.join());
           }
         };
