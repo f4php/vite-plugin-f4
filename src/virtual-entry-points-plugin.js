@@ -139,6 +139,20 @@ function stripQuotesAndTrim(string) {
   return string.replace(/^([\'\"])\s*(.+)\s*\1$/, '$2');
 }
 
+function createRegExp(paths) {
+
+    const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
+
+    const neverViaProxyPaths = paths
+      .filter(entry => !(entry instanceof RegExp))
+      .map(path => `(${escapeRegExp(path)})`);
+    const neverViaProxyRegExps = paths
+      .filter(entry => entry instanceof RegExp)
+      .map(path => `(${path.source})`);
+
+    return new RegExp(`^(?!${[...neverViaProxyPaths, ...neverViaProxyRegExps].join('|')}).*$`);
+}
+
 const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl, neverProxy, debug }) => {
   if (!pugPaths) {
     return;
@@ -166,15 +180,10 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
         ...configEntryPoints,
         ...virtualEntryPoints
       });
-      const escapeRegexp = /[/\-\\^$*+?.()|[\]{}]/g;
-      const neverViaProxyPaths = [
+      const proxyRegexp = createRegExp([
         ...neverProxy,
         ...Object.keys(configEntryPoints),
-      ]
-        .map(path => path.replace(escapeRegexp, '\\$&'))
-        .map(path => `(${path})`)
-        .join('|');
-      const proxyRegexp = '^(?!' + neverViaProxyPaths + ').*$';
+      ]).source;
       if (debug) {
         console.debug(`Configuring live proxy to URL: ${backendUrl}, using regexp: ${proxyRegexp} `);
       }
@@ -213,7 +222,7 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
     },
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (neverProxy.find(url => req.url.startsWith(url))) {
+        if (req.url.match(createRegExp(neverProxy))) {
           return next();
         }
         // const originalWrite = res.write;

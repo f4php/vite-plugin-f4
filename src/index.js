@@ -1,8 +1,6 @@
 import createConfigPlugin from './config-plugin.js';
 import createDependenciesAliasesPlugin from './dependencies-aliases-plugin.js';
-import createFixImportAnalysisPlugin from './fix-import-analysis-plugin.js';
 import createVirtualEntryPointsPlugin from './virtual-entry-points-plugin.js';
-import appendFinalPluginPlugin from './append-final-plugin-plugin.js';
 
 function vitePluginF4(options) {
   const {
@@ -17,23 +15,20 @@ function vitePluginF4(options) {
     backendUrl = 'http://localhost:8080',
     dependencies = [],
     prefix = `\0virtual:f4/`,
-    stylesheetFilenameRegexp = /^.+\.(css|scss|styl|stylus)$/,
-    inlineAssetsUrlRegexp = /\/templates\/.+\.(svg|jpg|jpeg|png|gif|webp|avif|woff|woff2|ttf|otf|eot|mp4|webm|ogg|cur|ico)/,
     neverProxy = [
       '/@vite',
       '/@id',
       '/@fs',
       '/node_modules',
       '/vendor/f4php/framework',
+      /\/templates\/.+\.(pug|js|ts|vue|css|scss|styl|stylus|svg|jpg|jpeg|png|gif|webp|avif|woff|woff2|ttf|otf|eot|mp4|webm|ogg|cur|ico)(\?.*)?/
     ],
-    transformPathRegexp = /^\/templates\//, // relative to root, all matching imports will get /@fs prefix
     debug = false,
   } = options;
   return [
     createConfigPlugin({ outDir, base }),
     createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl, neverProxy, debug }),
     createDependenciesAliasesPlugin({ dependencies, debug }),
-    appendFinalPluginPlugin({ plugin: createFixImportAnalysisPlugin, options: { prefix, inlineAssetsUrlRegexp, stylesheetFilenameRegexp, transformPathRegexp, debug } }),
   ]
 }
 
