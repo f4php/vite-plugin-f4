@@ -236,24 +236,33 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
           if (chunk) {
             chunks.push(chunk);
           }
-          const contentType = res.getHeader('content-type');
+          const contentType = res.getHeader('Content-Type');
           const isHTML = contentType?.includes('text/html');
-          // virtual endpoint resources are passed here as strings, 
-          // so we only process proxied content from the backend, 
+          // virtual endpoint resources are passed here as strings,
+          // so we only process proxied content from the backend,
           // which is an array of Buffers
           if (chunks.every(c => Buffer.isBuffer(c))) {
             const buffer = Buffer.concat(chunks);
-            if (isHTML) {
-              let body = buffer.toString('utf8');
-              if (!body.includes('/@vite/client')) {
-                body = body.replace('</head>', `<script type="module" src="/@vite/client"></script></head>`);
-                res.setHeader('content-length', Buffer.byteLength(body));
-                originalEnd.call(res, body);
-                return;
+            try {
+              if (isHTML) {
+                let body = buffer.toString('utf8');
+                if (!body.includes('/@vite/client')) {
+                  body = body.replace('</head>', `<script type="module" src="/@vite/client"></script></head>`);
+                  if(!res.headersSent) {
+                    res.setHeader('Content-Length', Buffer.byteLength(body));
+                  }
+                  originalEnd.call(res, body);
+                  return;
+                }
               }
+              if(!res.headersSent) {
+                res.setHeader('Content-Length', buffer.length);
+              }
+              originalEnd.call(res, buffer);
             }
-            res.setHeader('content-length', buffer.length);
-            originalEnd.call(res, buffer);
+            catch(e) {
+              console.error(e);
+            }
           } else {
             // Handle string chunks
             originalEnd.call(res, chunks.join());
