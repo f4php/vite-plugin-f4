@@ -225,7 +225,6 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
         if (req.url.match(createRegExp(neverProxy))) {
           return next();
         }
-        // const originalWrite = res.write;
         const originalEnd = res.end;
         const chunks = [];
         res.write = function (chunk) {

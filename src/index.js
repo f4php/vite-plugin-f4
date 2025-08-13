@@ -25,6 +25,7 @@ function vitePluginF4(options) {
     ],
     debug = false,
   } = options;
+  console.log('\x1b[33m%s\x1b[0m', 'Please note that you must have at least one vite:bundle statement in your pug templates to enable HMR')
   return [
     createConfigPlugin({ outDir, base }),
     createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl, neverProxy, debug }),
