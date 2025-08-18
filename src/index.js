@@ -21,7 +21,7 @@ function vitePluginF4(options) {
       '/@fs',
       '/node_modules',
       '/vendor/f4php/framework',
-      /\/templates\/.+\.(pug|js|ts|vue|css|scss|styl|stylus|svg|jpg|jpeg|png|gif|webp|avif|woff|woff2|ttf|otf|eot|mp4|webm|ogg|cur|ico)(\?.*)?/
+      /\/templates\/.+\.(pug|js|ts|vue|css|scss|styl|stylus|svg|jpg|jpeg|png|gif|webp|avif|woff|woff2|ttf|otf|eot|mp4|webm|ogg|cur|ico|ftl)(\?.*)?/
     ],
     debug = false,
   } = options;
