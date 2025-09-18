@@ -3,7 +3,6 @@ const createConfigPlugin = ({ outDir, base }) => {
     name: 'vite-plugin-f4-config',
     config(config) {
       return {
-        ...config,
         ...{
           publicDir: false,
           base,
@@ -21,7 +20,8 @@ const createConfigPlugin = ({ outDir, base }) => {
               ]
             }
           }
-        }
+        },
+        ...config
       };
     }
   };
