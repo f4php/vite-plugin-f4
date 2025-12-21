@@ -109,21 +109,20 @@ function generateRollupInputs(entryPoints, debug) {
       ...points
     ]
       .map((point) => {
-        if ((point?.type === 'simple') && (point?.name)) {
+        if (point?.path && (point?.type === 'simple') && point?.name) {
           return `import ${point.name} from '${point.path.replace(/\\/g, '/')}';`;
         }
-        else if (point?.type === 'simple') {
-          return `import '${point.path.replace(/\\/g, '/')}';`;
+        else if (point?.path && point?.type === 'simple') {
+          // "?bundle=..."" portion prevents rollup from overoptimizing and stripping repetitive css during production build
+          return `import '${point.path.replace(/\\/g, '/')}?bundle=${bundle}';`;
         }
-        else if (point?.type === 'vue-sfc') {
+        else if (point?.path && point?.type === 'vue-sfc' && point?.name) {
           return [
             `import ${point.name} from '${point.path.replace(/\\/g, '/')}';`,
-            point.element ? `customElements.define('${point.element}', defineCustomElement(${point.name}));` : null
+            point?.element ? `customElements.define('${point.element}', defineCustomElement(${point.name}));` : null,
           ].join('\n');
         }
-        else if (point) {
-          return point;
-        }
+        return null;
       })
       .filter(point => point)
       .join('\n');
