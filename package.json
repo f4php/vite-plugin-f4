@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-f4",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "This is a Vite plugin for f4, a lightweight web development framework",
   "keywords": [
     "f4",

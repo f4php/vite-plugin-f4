@@ -141,7 +141,7 @@ function generateRollupInputs(entryPoints, debug) {
         else if (point?.path && point?.type === 'vue-sfc' && point?.name && point?.element) {
           return [
             `import ${point.name} from '${point.path.replace(/\\/g, '/')}?bundle=${encodeURIComponent(bundle)}';`,
-            `if(document.querySelector('${point?.element}')) { createApp(${point.name}).mount(document.querySelector('${point?.element}')); }`,
+            `if(document.querySelector('${point?.element}')) { createApp(${point.name}, {...document.querySelector('${point?.element}')?.dataset || {}}).mount(document.querySelector('${point?.element}')); }`,
           ].join('\n');
         }
         else if (typeof point === 'string') {
