@@ -81,14 +81,14 @@ A typical page template looks like this:
 ```pug
 //- Declare resources (can be in any template file, including partials)
 vite:resource(src="./styles/main.css" bundle="default")
-vite:resource(src="./components/App.vue" element="#app" name="app" bundle="default")
+vite:resource(src="./components/App.vue" element="my-app" name="app" bundle="default")
 
 //- Render the bundle in the page <head>
 html
   head
     vite:bundle(name="default")
   body
-    #app
+    my-app
 ```
 
 ## The `vite:resource` tag
@@ -121,7 +121,7 @@ vite:resource(src="./scripts/analytics.js")
 //- Vue SFC mounted to a DOM element
 vite:resource(
   src="./components/MyWidget.vue"
-  element="#my-widget"
+  element="my-widget"
   name="my-widget"
 )
 
@@ -134,12 +134,12 @@ vite:resource(
 
 //- Multiple resources grouped in a named bundle
 vite:resource(src="./styles/admin.css" bundle="admin")
-vite:resource(src="./components/Dashboard.vue" element="#dashboard" name="dashboard" bundle="admin")
+vite:resource(src="./components/Dashboard.vue" element="my-dashboard" name="dashboard" bundle="admin")
 
 //- Vue SFC with setup functions
 vite:resource(
   src="./components/App.vue"
-  element="#app"
+  element="my-app"
   name="app"
   setup="primevue,pinia"
 )
@@ -203,7 +203,7 @@ Reference setup keys in the `setup` attribute of `vite:resource`:
 ```pug
 vite:resource(
   src="./components/App.vue"
-  element="#app"
+  element="my-app"
   name="app"
   setup="primevue,pinia"
 )
