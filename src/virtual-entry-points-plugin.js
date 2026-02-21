@@ -21,20 +21,23 @@ function extractAttributes(node) {
   const result = {};
   if (node.attrs) {
     node.attrs.forEach((attribute) => {
-      if (attribute.name === 'src') {
+      if (attribute?.name === 'src') {
         result.src = stripQuotesAndTrim(attribute.val);
       }
-      else if (attribute.name === 'bundle') {
+      else if (attribute?.name === 'bundle') {
         result.bundle = stripQuotesAndTrim(attribute.val);
       }
-      else if (attribute.name === 'element') {
+      else if (attribute?.name === 'element') {
         result.element = stripQuotesAndTrim(attribute.val);
       }
-      else if (attribute.name === 'custom-element') {
+      else if (attribute?.name === 'custom-element') {
         result.customElement = stripQuotesAndTrim(attribute.val);
       }
-      else if (attribute.name === 'name') {
+      else if (attribute?.name === 'name') {
         result.name = stripQuotesAndTrim(attribute.val);
+      }
+      else if (attribute?.name === 'setup') {
+        result.setup = stripQuotesAndTrim(attribute.val);
       }
     });
   }
@@ -45,7 +48,7 @@ function toCamelCase(identifier) {
   return identifier?.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
 }
 
-function locateEntryPoints(pugTemplates, debug) {
+function locateEntryPoints(pugTemplates, setups, debug) {
   const entryPoints = {};
   const defaultBundleName = 'default';
   const files = glob.sync(pugTemplates);
@@ -67,8 +70,8 @@ function locateEntryPoints(pugTemplates, debug) {
       const nodes = extractTags(ast, /^vite\:resource$/);
       nodes.forEach((node) => {
         const attrs = extractAttributes(node);
-        if (attrs.src) {
-          const bundle = attrs.bundle ?? defaultBundleName;
+        if (attrs?.src) {
+          const bundle = attrs?.bundle ?? defaultBundleName;
           if (!entryPoints[bundle]) {
             entryPoints[bundle] = [];
           }
@@ -79,12 +82,20 @@ function locateEntryPoints(pugTemplates, debug) {
             if (attrs?.element && attrs?.customElement) {
               throw new Error(`Either "element" or "custom-element" may be used for SFC resources in ${file}:${node.line}`);
             }
+            const pointSetups = attrs?.setup ? attrs
+              .setup
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean)
+              .map(v => setups?.[v] ?? v)
+              : [];
             entryPoints[bundle].push({
-              path: path.resolve(path.dirname(file), attrs.src),
-              element: attrs.element ?? null,
-              customElement: attrs.customElement ?? null,
-              name: toCamelCase(attrs.name ?? attrs.element),
-              type: 'vue-sfc'
+              path: path.resolve(path.dirname(file), attrs?.src),
+              element: attrs?.element,
+              customElement: attrs?.customElement,
+              name: toCamelCase(attrs?.name ?? attrs?.element ?? attrs?.customElement ?? ''),
+              type: 'vue-sfc',
+              setups: pointSetups,
             });
           }
           else {
@@ -110,7 +121,8 @@ function locateEntryPoints(pugTemplates, debug) {
 function generateRollupInputs(entryPoints, debug) {
   const input = {};
   for (const [bundle, points] of Object.entries(entryPoints)) {
-    const importStatements = [
+    const lines = [
+      `import path from 'path';`,
       `import 'vite/modulepreload-polyfill';`,
       (points.filter((point) => point?.type === 'vue-sfc' && point?.element).length ? `import { createApp } from 'vue';` : null),
       (points.filter((point) => point?.type === 'vue-sfc' && point?.customElement).length ? `import { defineCustomElement } from 'vue';` : null),
@@ -124,24 +136,67 @@ function generateRollupInputs(entryPoints, debug) {
         else if (point?.path && point?.type === 'simple') {
           return `import '${point?.path.replace(/\\/g, '/')}?bundle=${encodeURIComponent(bundle)}';`;
         }
-        else if (point?.path && point?.type === 'vue-sfc' && point?.customElement) {
-          return [
-            `import ${point.name} from '${point.path.replace(/\\/g, '/')}?bundle=${encodeURIComponent(bundle)}';`,
-            `customElements.define('${point.customElement}', defineCustomElement(${point.name}));`,
-            !point.path.match(/\.ce\.vue$/) ? `console.warn('Custom element ${point.customElement} must use ".ce.vue" filename extension to make sure stylesheet information is injected into shadow dom automatically');` : '',
-          ].join('\n');
+        // normal element mount
+        else if (point?.path && point?.type === 'vue-sfc' && point?.name && point?.element) {
+          const lines = [];
+          lines.push(
+            `import ${point.name} from '${point.path.replace(/\\/g, '/')}?bundle=${encodeURIComponent(bundle)}';`
+          );
+          const el = point.element;
+          let appExpr = `createApp(${point.name}, { ...document.querySelector('${el}')?.dataset || {} })`;
+          if(point?.setups) {
+            point.setups.forEach((setupPath, i) => {
+              lines.push(`import __setup_${point.name}_${i} from '${path.resolve(setupPath).replace(/\\/g, '/')}';`);
+              appExpr = `__setup_${point.name}_${i}(${appExpr})`;
+            });
+          }
+          lines.push(
+            `if (document.querySelector('${el}')) { ${appExpr}.mount(document.querySelector('${el}')); }`
+          );
+          return lines.join('\n');
         }
+        // custom element mount
+        else if (point?.path && point?.type === 'vue-sfc' && point?.name && point?.customElement) {
+          const lines = [];
+          lines.push(
+            `import ${point.name} from '${point.path.replace(/\\/g, '/')}?bundle=${encodeURIComponent(bundle)}';`
+          );
+          const el = point.element;
+          let appExpr = `createApp(${point.name}, { ...document.querySelector('${el}')?.dataset || {} })`;
+          if(point?.setups) {
+            point.setups.forEach((setupPath, i) => {
+              lines.push(`import __setup_${point.name}_${i} from '${path.resolve(setupPath).replace(/\\/g, '/')}';`);
+              appExpr = `__setup_${point.name}_${i}(${appExpr})`;
+            });
+            // With setups — compose all setups into the callback
+            lines.push(
+              `customElements.define('${point.customElement}', defineCustomElement(${point.name}, {`,
+              `  configureApp(app) {`,
+              ...point.setups.map((_, i) => `    __setup_${point.name}_${i}(app);`),
+              `  }`,
+              `}));`,
+            );
+          } else {
+            // No setups — plain registration as before
+            lines.push(
+              `customElements.define('${point.customElement}', defineCustomElement(${point.name}));`
+            );
+          }
+
+          if (!point.path.match(/\.ce\.vue$/)) {
+            lines.push(
+              `console.warn('Custom element ${point.customElement} must use ".ce.vue" filename extension to make sure stylesheet information is injected into shadow dom automatically');`
+            );
+          }
+
+          return lines.join('\n');
+        }
+        // global property (discouraged)
         else if (point?.path && point?.type === 'vue-sfc' && point?.name && !point?.element) {
           return [
             `import ${point.name} from '${point.path.replace(/\\/g, '/')}?bundle=${encodeURIComponent(bundle)}';`,
             `window.${point.name} = ${point.name};`,
             `console.warn('window.${point.name} was created due to missing \`element\` or \`custom-element\` on vite:resource tag, this pollutes the global namespace and is discouraged; bind the imported resource to html tag by specifying either \`element\` or \`custom-element\` attribute to hide this warning');`,
-          ].join('\n');
-        }
-        else if (point?.path && point?.type === 'vue-sfc' && point?.name && point?.element) {
-          return [
-            `import ${point.name} from '${point.path.replace(/\\/g, '/')}?bundle=${encodeURIComponent(bundle)}';`,
-            `if(document.querySelector('${point?.element}')) { createApp(${point.name}, {...document.querySelector('${point?.element}')?.dataset || {}}).mount(document.querySelector('${point?.element}')); }`,
           ].join('\n');
         }
         else if (typeof point === 'string') {
@@ -153,7 +208,7 @@ function generateRollupInputs(entryPoints, debug) {
       })
       .filter(point => point)
       .join('\n');
-    input[bundle] = importStatements;
+    input[bundle] = lines;
   }
   if (debug) {
     console.debug(`Configured bundles:`, input);
@@ -179,12 +234,12 @@ function createRegExp(paths) {
     return new RegExp(`^(?!${[...neverViaProxyPaths, ...neverViaProxyRegExps].join('|')}).*$`);
 }
 
-const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl, neverProxy, debug }) => {
+const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl, neverProxy, setups, debug }) => {
   if (!pugPaths) {
     return;
   }
   const PREFIX = prefix;
-  const pugEntryPoints = locateEntryPoints(pugPaths, debug);
+  const pugEntryPoints = locateEntryPoints(pugPaths, setups, debug);
   const virtualEntryPoints = generateRollupInputs(pugEntryPoints, debug);
   const configEntryPoints = {};
   let root;

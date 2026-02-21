@@ -24,11 +24,12 @@ function vitePluginF4(options) {
       /\/templates\/.+\.(pug|js|ts|vue|css|scss|styl|stylus|svg|jpg|jpeg|png|gif|webp|avif|woff|woff2|ttf|otf|eot|mp4|webm|ogg|cur|ico|ftl)(\?.*)?/
     ],
     debug = false,
+    setups = {},
   } = options;
   console.log('\x1b[33m%s\x1b[0m', 'Please note that you must have at least one vite:bundle statement in your pug templates to enable HMR')
   return [
     createConfigPlugin({ outDir, base }),
-    createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl, neverProxy, debug }),
+    createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl, neverProxy, setups, debug }),
     createDependenciesAliasesPlugin({ dependencies, debug }),
   ]
 }
