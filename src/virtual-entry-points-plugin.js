@@ -102,13 +102,13 @@ function locateEntryPoints(pugTemplates, setups, debug) {
             entryPoints[bundle].push({
               path: path.resolve(path.dirname(file), attrs.src),
               type: 'simple',
-              name: toCamelCase(attrs.name??''),
+              name: toCamelCase(attrs.name ?? ''),
             });
           }
         }
       });
     }
-    catch(e) {
+    catch (e) {
       console.error(`\x1b[31m Failed to parse ${file}\n` + e);
     }
   }
@@ -144,7 +144,7 @@ function generateRollupInputs(entryPoints, debug) {
           );
           const el = point.element;
           let appExpr = `createApp(${point.name}, { ...document.querySelector('${el}')?.dataset || {} })`;
-          if(point?.setups) {
+          if (point?.setups) {
             point.setups.forEach((setupPath, i) => {
               lines.push(`import __setup_${point.name}_${i} from '${path.resolve(setupPath).replace(/\\/g, '/')}';`);
               appExpr = `__setup_${point.name}_${i}(${appExpr})`;
@@ -163,7 +163,7 @@ function generateRollupInputs(entryPoints, debug) {
           );
           const el = point.element;
           let appExpr = `createApp(${point.name}, { ...document.querySelector('${el}')?.dataset || {} })`;
-          if(point?.setups) {
+          if (point?.setups) {
             point.setups.forEach((setupPath, i) => {
               lines.push(`import __setup_${point.name}_${i} from '${path.resolve(setupPath).replace(/\\/g, '/')}';`);
               appExpr = `__setup_${point.name}_${i}(${appExpr})`;
@@ -222,16 +222,16 @@ function stripQuotesAndTrim(string) {
 
 function createRegExp(paths) {
 
-    const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
+  const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
 
-    const neverViaProxyPaths = paths
-      .filter(entry => !(entry instanceof RegExp))
-      .map(path => `(${escapeRegExp(path)})`);
-    const neverViaProxyRegExps = paths
-      .filter(entry => entry instanceof RegExp)
-      .map(path => `(${path.source})`);
+  const neverViaProxyPaths = paths
+    .filter(entry => !(entry instanceof RegExp))
+    .map(path => `(${escapeRegExp(path)})`);
+  const neverViaProxyRegExps = paths
+    .filter(entry => entry instanceof RegExp)
+    .map(path => `(${path.source})`);
 
-    return new RegExp(`^(?!${[...neverViaProxyPaths, ...neverViaProxyRegExps].join('|')}).*$`);
+  return new RegExp(`^(?!${[...neverViaProxyPaths, ...neverViaProxyRegExps].join('|')}).*$`);
 }
 
 const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendUrl, neverProxy, setups, debug }) => {
@@ -283,7 +283,7 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
             }
           }
         }
-      }
+      };
     },
     configResolved(config) {
       root = config.root;
@@ -306,47 +306,46 @@ const createVirtualEntryPointsPlugin = ({ pugPaths, prefix, host, port, backendU
         if (req.url.match(createRegExp(neverProxy))) {
           return next();
         }
-        const originalEnd = res.end;
+        const originalWrite = res.write.bind(res);
+        const originalEnd = res.end.bind(res);
+
         const chunks = [];
-        res.write = function (chunk) {
-          chunks.push(chunk);
+        let shouldBuffer = false;
+
+        res.write = (chunk, ...args) => {
+          // Decide lazily: once headers exist, you can check content-type
+          const ct = String(res.getHeader('Content-Type') ?? '');
+          if (ct.includes('text/html')) {
+            shouldBuffer = true;
+          }
+
+          if (!shouldBuffer) {
+            return originalWrite(chunk, ...args);
+          }
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
           return true;
         };
-        res.end = function (chunk) {
-          if (chunk) {
-            chunks.push(chunk);
+        res.end = (chunk, ...args) => {
+          const ct = String(res.getHeader('Content-Type') ?? '');
+          if (ct.includes('text/html')) {
+            shouldBuffer = true;
           }
-          const contentType = res.getHeader('Content-Type');
-          const isHTML = contentType?.includes('text/html');
-          // virtual endpoint resources are passed here as strings,
-          // so we only process proxied content from the backend,
-          // which is an array of Buffers
-          if (chunks.every(c => Buffer.isBuffer(c))) {
-            const buffer = Buffer.concat(chunks);
-            try {
-              if (isHTML) {
-                let body = buffer.toString('utf8');
-                if (!body.includes('/@vite/client')) {
-                  body = body.replace('</head>', `<script type="module" src="/@vite/client"></script></head>`);
-                  if(!res.headersSent) {
-                    res.setHeader('Content-Length', Buffer.byteLength(body));
-                  }
-                  originalEnd.call(res, body);
-                  return;
-                }
-              }
-              if(!res.headersSent) {
-                res.setHeader('Content-Length', buffer.length);
-              }
-              originalEnd.call(res, buffer);
-            }
-            catch(e) {
-              console.error(e);
-            }
-          } else {
-            // Handle string chunks
-            originalEnd.call(res, chunks.join());
+
+          if (!shouldBuffer) {
+            return originalEnd(chunk, ...args);
           }
+
+          if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+          let body = Buffer.concat(chunks).toString('utf8');
+
+          if (!body.includes('/@vite/client')) {
+            body = body.replace(
+              '</head>',
+              `<script type="module" src="/@vite/client"></script></head>`
+            );
+          }
+          res.removeHeader('Content-Length'); // avoid mismatches
+          return originalEnd(body, ...args);
         };
         next();
       });
