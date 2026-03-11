@@ -88,6 +88,7 @@ function locateEntryPoints(pugTemplates, setups, debug) {
               .map(s => s.trim())
               .filter(Boolean)
               .map(v => setups?.[v] ?? v)
+              .map(setup => path.resolve(path.resolve(path.dirname(file), setup)))
               : [];
             entryPoints[bundle].push({
               path: path.resolve(path.dirname(file), attrs?.src),
@@ -146,7 +147,7 @@ function generateRollupInputs(entryPoints, debug) {
           let appExpr = `createApp(${point.name}, { ...document.querySelector('${el}')?.dataset || {} })`;
           if (point?.setups) {
             point.setups.forEach((setupPath, i) => {
-              lines.push(`import __setup_${point.name}_${i} from '${path.resolve(setupPath).replace(/\\/g, '/')}';`);
+              lines.push(`import __setup_${point.name}_${i} from '${setupPath.replace(/\\/g, '/')}';`);
               appExpr = `__setup_${point.name}_${i}(${appExpr})`;
             });
           }
@@ -165,7 +166,7 @@ function generateRollupInputs(entryPoints, debug) {
           let appExpr = `createApp(${point.name}, { ...document.querySelector('${el}')?.dataset || {} })`;
           if (point?.setups) {
             point.setups.forEach((setupPath, i) => {
-              lines.push(`import __setup_${point.name}_${i} from '${path.resolve(setupPath).replace(/\\/g, '/')}';`);
+              lines.push(`import __setup_${point.name}_${i} from '${setupPath.replace(/\\/g, '/')}';`);
               appExpr = `__setup_${point.name}_${i}(${appExpr})`;
             });
             // With setups — compose all setups into the callback
