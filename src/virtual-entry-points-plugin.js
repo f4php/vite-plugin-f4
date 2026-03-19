@@ -123,7 +123,7 @@ function generateRollupInputs(entryPoints, debug) {
   const input = {};
   for (const [bundle, points] of Object.entries(entryPoints)) {
     const lines = [
-      `import path from 'path';`,
+      // `import path from 'path';`,
       `import 'vite/modulepreload-polyfill';`,
       (points.filter((point) => point?.type === 'vue-sfc' && point?.element).length ? `import { createApp } from 'vue';` : null),
       (points.filter((point) => point?.type === 'vue-sfc' && point?.customElement).length ? `import { defineCustomElement } from 'vue';` : null),
