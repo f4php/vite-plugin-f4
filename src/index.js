@@ -9,6 +9,7 @@ function vitePluginF4(options) {
       'vendor/f4php/framework/templates/**/*.pug'
     ],
     outDir = './public/assets',
+    assetsDir = '',
     base = './',
     host = 'localhost',
     port = 5173,
@@ -28,7 +29,7 @@ function vitePluginF4(options) {
   } = options;
   console.log('\x1b[33m%s\x1b[0m', 'Please note that you must have at least one vite:bundle statement in your pug templates to enable HMR')
   return [
-    createConfigPlugin({ outDir, base }),
+    createConfigPlugin({ outDir, assetsDir, base }),
     createVirtualEntryPointsPlugin({ pugPaths, prefix, host, port, backendUrl, neverProxy, setups, debug }),
     createDependenciesAliasesPlugin({ dependencies, debug }),
   ]

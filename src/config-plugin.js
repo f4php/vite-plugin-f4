@@ -27,13 +27,14 @@ const deepMerge = (target, source, options = { array: 'replace' }) => {
   return isPlainObject(target) ? { ...target } : target;
 }
 
-const createConfigPlugin = ({ outDir, base }) => {
+const createConfigPlugin = ({ outDir, assetsDir, base }) => {
   const defaultOptions = {
     publicDir: false,
     base,
     build: {
       manifest: true,
       outDir,
+      assetsDir,
       cssCodeSplit: true,
       rollupOptions: {
         output: [
